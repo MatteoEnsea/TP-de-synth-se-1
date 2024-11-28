@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define BUFFER_SIZE 128
+#define BUFFER_SIZE 128 
 
 void print_welcome_message() {
     const char *message = "Bienvenue dans le Shell ENSEA.\nPour quitter, tapez 'exit'.\n";
@@ -10,13 +10,13 @@ void print_welcome_message() {
 }
 
 void print_prompt() {
-    const char *prompt = "enseash % ";
+    const char *prompt = "enseash % \n";
     write(STDOUT_FILENO, prompt, strlen(prompt));
 }
 
 int main() {
     char buffer[BUFFER_SIZE];
-    print_prompt();
     print_welcome_message();
+    print_prompt();
     return 0;
 }
