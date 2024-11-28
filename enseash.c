@@ -30,6 +30,11 @@ int main() {
             buffer[read_size - 1] = '\0';
         } 
 
+        if (strncmp(buffer, "exit", 4) == 0){ 
+            write(STDOUT_FILENO,"À bientot...\n", strlen("À bientot...\n"));
+            break;    
+        }
+
         pid_t pid = fork();
 
         if (pid > 0){ //If father process, wait for the child process to finish
