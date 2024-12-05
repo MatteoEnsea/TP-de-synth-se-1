@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <time.h>
 
 #define BUFFER_SIZE 128 
 
@@ -10,20 +11,27 @@ void print_welcome_message() {
     write(STDOUT_FILENO, message, strlen(message));
 }
 
-void print_prompt(int status) { //Print the prompt with the return code of the previous  command
+void print_prompt(int status,int time) { //Print the prompt with the return code of the previous  command
     char prompt[BUFFER_SIZE] = "enseah ";
 
     if (WIFEXITED(status)){//If the child process didn't exit normaly
         int exit_code=WEXITSTATUS(status);
-        sprintf(prompt + strlen(prompt), "[exit:%d] % ", exit_code);
+        sprintf(prompt + strlen(prompt), "[exit:%d]|%ldms]  % ", exit_code,time);
     }else if (WIFSIGNALED(status)){// If the child process was killed by a signal
         int signal = WTERMSIG(status);
-        sprintf(prompt + strlen(prompt), "[signal:%d] % ", signal);
+        sprintf(prompt + strlen(prompt), "[signal:%d|%ldms] % ", signal,time);
     }else{//If the child process exit normaly
-        sprintf(prompt + strlen(prompt), " % ");
+        sprintf(prompt + strlen(prompt), "|%ldms  % ",time);
     }
 
     write(STDOUT_FILENO, prompt, strlen(prompt));
+}
+
+long calculating_time(struct timespec start, struct timespec end){ //Compute time in ms between end and start
+    long sec = end.tv_sec - start.tv_sec;
+    long nsec = end.tv_nsec - start.tv_nsec;
+    long time = sec*1000 + nsec/1000000;
+    return time;
 }
 
 
@@ -31,12 +39,13 @@ int main() {
     char buffer[BUFFER_SIZE];
     ssize_t read_size; 
     int last_status = 0; 
+    long timems = 0;
 
     print_welcome_message();
 
     while (1){
 
-        print_prompt(last_status);
+        print_prompt(last_status,timems);
 
         read_size = read(STDIN_FILENO, buffer, BUFFER_SIZE - 1);
 
@@ -52,8 +61,12 @@ int main() {
         pid_t pid = fork();
 
         if (pid > 0){ //If father process, wait for the child process to finish
+            struct timespec tick,tack;
             int status;
+            clock_gettime(CLOCK_MONOTONIC, &tick);
             wait(&status);
+            clock_gettime(CLOCK_MONOTONIC, &tack);
+            timems = calculating_time(tick,tack);
             last_status = status; //Update the status for the prompt
         }else if (pid==0){ //If child process, execute the command
             execlp(buffer,buffer,NULL);
