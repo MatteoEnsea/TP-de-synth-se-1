@@ -11,17 +11,17 @@ void print_welcome_message() {
     write(STDOUT_FILENO, message, strlen(message));
 }
 
-void print_prompt(int status,int time) { //Print the prompt with the return code of the previous  command
+void print_prompt(int status,long time) { //Print the prompt with the return code of the previous  command
     char prompt[BUFFER_SIZE] = "enseah ";
 
     if (WIFEXITED(status)){//If the child process didn't exit normaly
         int exit_code=WEXITSTATUS(status);
-        sprintf(prompt + strlen(prompt), "[exit:%d]|%ldms]  % ", exit_code,time);
+        sprintf(prompt + strlen(prompt), "[exit:%d]|%ldms]  %% ", exit_code,time);
     }else if (WIFSIGNALED(status)){// If the child process was killed by a signal
         int signal = WTERMSIG(status);
-        sprintf(prompt + strlen(prompt), "[signal:%d|%ldms] % ", signal,time);
+        sprintf(prompt + strlen(prompt), "[signal:%d|%ldms] %% ", signal,time);
     }else{//If the child process exit normaly
-        sprintf(prompt + strlen(prompt), "|%ldms  % ",time);
+        sprintf(prompt + strlen(prompt), "|%ldms  %% ",time);
     }
 
     write(STDOUT_FILENO, prompt, strlen(prompt));
@@ -34,9 +34,21 @@ long calculating_time(struct timespec start, struct timespec end){ //Compute tim
     return time;
 }
 
+void parse_command(char *input, char *args[]) { //Isolate all inputs arguments in args
+    int i = 0;
+    char *token = strtok(input, " "); //Split the arguments with a space
+    while (token != NULL) {
+        args[i++] = token;
+        token = strtok(NULL, " ");
+    }
+    args[i] = NULL; //Finish the array by NULL for execvp
+}
+
+
 
 int main() {
     char buffer[BUFFER_SIZE];
+    char *args[BUFFER_SIZE/2];
     ssize_t read_size; 
     int last_status = 0; 
     long timems = 0;
@@ -69,8 +81,9 @@ int main() {
             timems = calculating_time(tick,tack);
             last_status = status; //Update the status for the prompt
         }else if (pid==0){ //If child process, execute the command
-            execlp(buffer,buffer,NULL);
-            perror("Erreur lors de l'execution de la commande");
+            parse_command(buffer, args);
+            execvp(args[0], args);
+            perror("Erreur lors de l'exécution de la commande");
             _exit(1);
         }else if (pid==-1){ //If error using fork
             perror("Erreur lors du fork");
